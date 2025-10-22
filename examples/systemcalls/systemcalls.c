@@ -16,7 +16,7 @@ bool do_system(const char *cmd)
  *   and return a boolean true if the system() call completed with success
  *   or false() if it returned a failure
 */
-
+    if((system(cmd)) == -1) return false;
     return true;
 }
 
@@ -58,10 +58,23 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *
 */
+    bool toReturn = true;
+    int pid;
+    if ((pid = fork()) == 0){
+        execv(command[0], command);
+        exit(-1);
+    } else {
+        if(pid != -1) {
+            int status;
+            waitpid(pid, &status, 0);
+            if (!(WIFEXITED(status) && WEXITSTATUS(status) == 0)) toReturn = false;
+        }
+        else toReturn = false;
+    }
 
     va_end(args);
 
-    return true;
+    return toReturn;
 }
 
 /**
@@ -92,8 +105,26 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *   The rest of the behaviour is same as do_exec()
  *
 */
+    bool toReturn = true;
+    int pid;
+    int fd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644);
+    if (fd < 0) { perror("open"); abort(); }
+    if ((pid = fork()) == 0){
+        if (dup2(fd, 1) < 0) { perror("dup2"); abort(); }
+        close(fd);
+        execv(command[0], command);
+        exit(-1);
+    } else {
+        close(fd);
+        if(pid != -1) {
+            int status;
+            waitpid(pid, &status, 0);
+            if (!(WIFEXITED(status) && WEXITSTATUS(status) == 0)) toReturn = false;
+        }
+        else toReturn = false;
+    }
 
     va_end(args);
 
-    return true;
+    return toReturn;
 }
