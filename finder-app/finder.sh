@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 if [ $# -lt 2 ]
 then
 	echo "Usage: $0 <path/to/directory> <string to search>"
