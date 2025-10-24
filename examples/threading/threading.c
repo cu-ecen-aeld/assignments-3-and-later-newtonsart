@@ -13,7 +13,28 @@ void* threadfunc(void* thread_param)
 
     // TODO: wait, obtain mutex, wait, release mutex as described by thread_data structure
     // hint: use a cast like the one below to obtain thread arguments from your parameter
-    //struct thread_data* thread_func_args = (struct thread_data *) thread_param;
+    struct thread_data* thread_func_args = (struct thread_data *) thread_param;
+    int s = usleep(thread_func_args->wait_to_obtain_ms * 1000);
+    if (s != 0) {
+        ERROR_LOG("Error sleeping to obtain mutex");
+        thread_func_args->thread_complete_success = false;
+    }
+    s = pthread_mutex_lock(thread_func_args->mutex);
+    if (s != 0) {
+        ERROR_LOG("Error obtaining mutex");
+        thread_func_args->thread_complete_success = false;
+    }
+    s = usleep(thread_func_args->wait_to_release_ms * 1000);
+    if (s != 0) {
+        ERROR_LOG("Error sleeping with mutex");
+        thread_func_args->thread_complete_success = false;
+    }
+    s = pthread_mutex_unlock(thread_func_args->mutex);
+    if (s != 0) {
+        ERROR_LOG("Error releasing mutex");
+        thread_func_args->thread_complete_success = false;
+    }
+
     return thread_param;
 }
 
@@ -28,6 +49,31 @@ bool start_thread_obtaining_mutex(pthread_t *thread, pthread_mutex_t *mutex,int 
      *
      * See implementation details in threading.h file comment block
      */
-    return false;
+    struct thread_data arguments;
+    arguments.wait_to_obtain_ms = wait_to_obtain_ms;
+    arguments.wait_to_release_ms = wait_to_release_ms;
+    arguments.thread_complete_success = true;
+    arguments.mutex = mutex;
+
+
+    int s = pthread_create(&thread, NULL, threadfunc, (void*)&arguments);
+    if (s != 0) {
+        ERROR_LOG("Error creating thread");
+        return false;
+    }
+
+    void* void_data;
+    s = pthread_join(thread, &void_data);
+    if (s != 0) {
+        ERROR_LOG("Error joining thread");
+        return false;
+    }
+    struct thread_data* data_returned = (struct thread_data*) void_data;
+    
+    bool toReturn = data_returned->thread_complete_success;
+
+    free(data_returned);
+
+    return toReturn;
 }
 
