@@ -54,7 +54,6 @@ bool start_thread_obtaining_mutex(pthread_t *thread, pthread_mutex_t *mutex,int 
         ERROR_LOG("Error Allocating memory");
         return false;
     }
-    struct thread_data arguments;
     arguments->wait_to_obtain_ms = wait_to_obtain_ms;
     arguments->wait_to_release_ms = wait_to_release_ms;
     arguments->thread_complete_success = true;
@@ -63,6 +62,7 @@ bool start_thread_obtaining_mutex(pthread_t *thread, pthread_mutex_t *mutex,int 
     int s = pthread_create(thread, NULL, threadfunc, (void*)arguments);
     if (s != 0) {
         ERROR_LOG("Error creating thread");
+        free(arguments);
         return false;
     }
 
@@ -70,6 +70,7 @@ bool start_thread_obtaining_mutex(pthread_t *thread, pthread_mutex_t *mutex,int 
     s = pthread_join(*thread, &void_data);
     if (s != 0) {
         ERROR_LOG("Error joining thread");
+        free(arguments);
         return false;
     }
     struct thread_data* data_returned = (struct thread_data*) void_data;
@@ -77,6 +78,7 @@ bool start_thread_obtaining_mutex(pthread_t *thread, pthread_mutex_t *mutex,int 
     bool toReturn = data_returned->thread_complete_success;
 
     free(data_returned);
+    free(arguments);
 
     return toReturn;
 }
