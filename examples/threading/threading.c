@@ -66,20 +66,6 @@ bool start_thread_obtaining_mutex(pthread_t *thread, pthread_mutex_t *mutex,int 
         return false;
     }
 
-    void* void_data;
-    s = pthread_join(*thread, &void_data);
-    if (s != 0) {
-        ERROR_LOG("Error joining thread");
-        free(arguments);
-        return false;
-    }
-    struct thread_data* data_returned = (struct thread_data*) void_data;
-
-    bool toReturn = data_returned->thread_complete_success;
-
-    free(data_returned);
-    free(arguments);
-
-    return toReturn;
+    return arguments->thread_complete_success;
 }
 
