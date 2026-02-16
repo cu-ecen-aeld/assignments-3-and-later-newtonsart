@@ -3,7 +3,7 @@
 
 CC ?= $(CROSS_COMPILE)gcc
 CFLAGS ?= -Wall -Werror -g
-LDFLAGS ?=
+LDFLAGS ?= -pthread -lrt
 
 TARGET = aesdsocket
 SRC = aesdsocket.c
