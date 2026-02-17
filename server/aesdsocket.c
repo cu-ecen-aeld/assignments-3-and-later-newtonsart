@@ -212,11 +212,14 @@ static void *thread_func(void *thread_param)
 static void *timestamp_func(void *param)
 {
     while (!caught_signal) {
-        // Sleep for 10 seconds
-        struct timespec ts;
-        ts.tv_sec = 10;
-        ts.tv_nsec = 0;
-        nanosleep(&ts, NULL);
+        // Sleep for 10 seconds in small intervals so we exit quickly on signal
+        int i;
+        for (i = 0; i < 100 && !caught_signal; i++) {
+            struct timespec ts;
+            ts.tv_sec = 0;
+            ts.tv_nsec = 100000000; // 100ms
+            nanosleep(&ts, NULL);
+        }
         
         if (caught_signal) break;
         
@@ -326,7 +329,14 @@ int main(int argc, char *argv[])
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(PORT);
     
-    if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
+    /* Retry bind in case a previous instance hasn't fully released the port */
+    int bind_retries = 10;
+    while (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
+        if (errno == EADDRINUSE && --bind_retries > 0) {
+            syslog(LOG_INFO, "Port %d in use, retrying bind (%d attempts left)...", PORT, bind_retries);
+            sleep(1);
+            continue;
+        }
         syslog(LOG_ERR, "Failed to bind socket: %s", strerror(errno));
         close(server_fd);
         closelog();
